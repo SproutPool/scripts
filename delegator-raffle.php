@@ -4,7 +4,7 @@
 $tickets_default = 1000;
 
 // get raw delegator data from CSV file
-$raw_delegator_data = import_delegator_data("282_delegator_list.csv", 1000, $tickets_default);
+$raw_delegator_data = import_delegator_data("delegator_list.csv", 1000, $tickets_default);
 
 // adding bonus tickets based on stake amount
 $final_delegator_data = add_stake_amount_bonus_tickets($raw_delegator_data);
