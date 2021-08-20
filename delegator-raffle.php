@@ -9,6 +9,9 @@ $raw_delegator_data = import_delegator_data("delegator_list.csv", 1000, $tickets
 // adding bonus tickets based on stake amount
 $final_delegator_data = add_stake_amount_bonus_tickets($raw_delegator_data);
 
+// removing tickets based on previous wins
+$final_delegator_data = remove_previous_winner_tickets($final_delegator_data, get_current_draw_number($final_delegator_data));
+
 // distribution TEST
 // echo json_encode(distribution_test($final_delegator_data, 100000)); exit;
 
@@ -38,7 +41,12 @@ function import_delegator_data ($csv_file_name, $max_file_rows, $probability_def
                         $delegator['address'] = $data_column;
                         break;
                     case 2:
+                        $delegator['previous_wins'] = $data_column != '' ? explode(',',$data_column) : [];
+                        break;
+                    case 3:
                         $delegator['stake'] = $data_column;
+
+                        // add-ons
                         $delegator['tickets'] = $probability_default;
                         if ($data_column != '') {
                             $delegators[] = $delegator;
@@ -56,6 +64,39 @@ function add_stake_amount_bonus_tickets ($delegators) {
     foreach ($delegators as &$delegator) {
         $bonus_tickets = $delegator['stake']/1000;
         $delegator['tickets'] += $bonus_tickets > 100 ? 100 : round($bonus_tickets);
+    }
+    return $delegators;
+}
+
+function get_current_draw_number ($delegators) {
+    $current_draw = 0;
+    foreach ($delegators as $delegator) {
+        if (!empty($delegator['previous_wins'])) {
+            foreach ($delegator['previous_wins'] as $previous_win) {
+                if ($previous_win > $current_draw) {
+                    $current_draw = $previous_win;
+                }
+            }
+        }
+    }
+    return $current_draw+1;
+}
+
+function remove_previous_winner_tickets ($delegators, $current_draw_number) {
+    foreach ($delegators as &$delegator) {
+        if (!empty($delegator['previous_wins'])) {
+            $updated_tickets = $delegator['tickets'];
+            foreach ($delegator['previous_wins'] as $previous_win) {
+                // slash tickets in half for every previous win
+                $updated_tickets = round($updated_tickets / 2);
+
+                // remove ALL tickets of previous draw's winner
+                if ($previous_win == $current_draw_number-1) {
+                    $delegator['tickets'] = 0;
+                }
+            }
+            $delegator['tickets'] = $updated_tickets;
+        }
     }
     return $delegators;
 }
